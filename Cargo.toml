@@ -1,7 +1,7 @@
 [package]
 name = "tauri-plugin-solana-wallet"
 version = "0.0.0"
-authors = [ "Levi Cook" ]
+authors = ["Levi Cook"]
 description = ""
 edition = "2021"
 rust-version = "1.57"
@@ -11,3 +11,11 @@ exclude = ["/examples", "/webview-dist", "/webview-src", "node_modules"]
 tauri = { version = "1.0.5" }
 serde = "1.0"
 thiserror = "1.0"
+
+anyhow = "1.0.34"
+
+keyring = "1.2.0"
+solana-sdk = "1.11.5"
+tiny-bip39 = "0.8.2"
+
+rusqlite = { version = "0.28.0", features = ["bundled"] }
