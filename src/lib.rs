@@ -1,3 +1,5 @@
+use std::fs::create_dir_all;
+
 use bip39::{Language, Mnemonic, MnemonicType, Seed};
 use rusqlite::{params, Connection};
 use serde::{ser::Serializer, Serialize};
@@ -36,7 +38,8 @@ const PLUGIN_NAME: &str = "solana-wallet";
 const SQL_CREATE_MNEMONIC_METADATA: &str = "
     CREATE TABLE IF NOT EXISTS mnemonic_metadata (
         public_key TEXT PRIMARY KEY,
-        languate_code TEXT
+        language_code TEXT,
+        imported_at DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL
     );
 ";
 
@@ -52,9 +55,20 @@ const SQL_DELETE_MNEMONIC_METADATA: &str = "
     DELETE FROM mnemonic_metadata WHERE public_key = ?1;
 ";
 
-// #[derive(Default)]
+const SQL_SELECT_MNEMONIC_METADATA: &str = "
+    SELECT public_key, language_code, unixepoch(imported_at) FROM mnemonic_metadata ORDER by imported_at;
+";
+
 struct Database {
     conn: Mutex<rusqlite::Connection>,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct MnemonicMetadata {
+    public_key: String,
+    language_code: String,
+    imported_at: u64,
 }
 
 /// Initializes the plugin.
@@ -65,14 +79,18 @@ pub fn init<R: Runtime>() -> TauriPlugin<R> {
             import_mnemonic,
             export_mnemonic,
             delete_mnemonic,
-            list_mnemonic_pubkeys,
+            fetch_mnemonic_metadatas,
         ])
         .setup(|app| {
-            let path = app
+            let app_path = app
                 .path_resolver()
                 .app_dir()
-                .expect("failed to get app_dir")
-                .join("solana-wallet.db");
+                .expect("failed to get app_dir");
+
+            create_dir_all(app_path.clone())?;
+
+            let path = app_path.join("solana-wallet.db");
+
             let conn = Connection::open(path).expect("failed to open db");
             init_db(&conn)?;
             let db = Database {
@@ -86,6 +104,7 @@ pub fn init<R: Runtime>() -> TauriPlugin<R> {
 }
 
 fn init_db(conn: &Connection) -> Result<()> {
+    // conn.execute("DROP TABLE IF EXISTS mnemonic_metadata", [])?;
     conn.execute(SQL_CREATE_MNEMONIC_METADATA, [])?;
     Ok(())
 }
@@ -105,7 +124,7 @@ async fn import_mnemonic(
     phrase: String,
     language_code: String,
     password: Option<String>,
-) -> Result<Pubkey> {
+) -> Result<String> {
     // let language_code = language_code.unwrap_or_else(|| String::from("en"));
     let language = Language::from_language_code(&language_code);
     let mnemonic = Mnemonic::from_phrase(&phrase, language.unwrap_or_default())?;
@@ -130,7 +149,9 @@ async fn import_mnemonic(
     let entry = keyring::Entry::new(&PLUGIN_NAME, &entry);
     entry.set_password(&mnemonic.phrase()).unwrap();
 
-    Ok(pubkey)
+    // TODO emit an event here?
+
+    Ok(pubkey.to_string())
 }
 
 #[tauri::command]
@@ -152,6 +173,8 @@ async fn delete_mnemonic(state: State<'_, Database>, pubkey: Pubkey) -> Result<(
     let entry = keyring::Entry::new(&PLUGIN_NAME, &entry);
     entry.delete_password()?;
 
+    // TODO emit an event here?
+
     Ok(())
 }
 
@@ -162,61 +185,19 @@ fn export_mnemonic(_state: State<Database>, _pubkey: Pubkey) -> Result<String> {
 }
 
 #[tauri::command]
-fn list_mnemonic_pubkeys(_state: State<Database>) -> Result<Vec<Pubkey>> {
-    Ok(vec![])
-}
-
-#[cfg(test)]
-mod tests {
-    /*
-    use crate::{generate_mnemonic_phrase, Database};
-    use rusqlite::Connection;
-    use tauri::async_runtime::Mutex;
-
-    #[test]
-    fn it_works() {
-        let conn = Connection::open_in_memory().unwrap();
-        let db = Database {
-            conn: Mutex::new(conn),
-        };
-
-        let word_count = 12;
-        let language_code = String::from("en");
-        let mnemonic_phrase = generate_mnemonic_phrase(word_count, language_code).unwrap();
+async fn fetch_mnemonic_metadatas(state: State<'_, Database>) -> Result<Vec<MnemonicMetadata>> {
+    let mut results = vec![];
+    let conn = state.conn.lock().await;
+    let mut stmt = conn.prepare(SQL_SELECT_MNEMONIC_METADATA)?;
+    let iter = stmt.query_map([], |row| {
+        Ok(MnemonicMetadata {
+            public_key: row.get(0)?,
+            language_code: row.get(1)?,
+            imported_at: row.get(2)?,
+        })
+    })?;
+    for result in iter {
+        results.push(result?);
     }
-
-    // use crate::new_mnemonic_phrase;
-    #[test]
-    fn it_works() {
-        let word_count = 12;
-        let language_code = String::from("en");
-        println!( "{}", new_mnemonic_phrase(word_count, language_code.clone()).unwrap());
-    }
-
-    //  use crate::{create_keypair, delete_keypair, read_keypair};
-    //  use bip39::{Mnemonic, Seed};
-    //  use solana_sdk::{signature::keypair_from_seed, signer::Signer};
-    #[test]
-    fn it_works() {
-        let mnemonic_type = bip39::MnemonicType::Words24;
-        let language = bip39::Language::English;
-        let mnemonic = Mnemonic::new(mnemonic_type, language);
-        let passphrase = "";
-
-        let seed = Seed::new(&mnemonic, &passphrase);
-        let kp_a = keypair_from_seed(seed.as_bytes()).unwrap();
-
-        let pk_a = create_keypair(&kp_a).unwrap();
-        assert_eq!(pk_a, kp_a.pubkey());
-
-        let kp_b = read_keypair(&pk_a).unwrap();
-        assert_eq!(kp_a, kp_b);
-
-        let r = delete_keypair(&kp_b.pubkey());
-        assert!(r.is_ok());
-
-        let r = delete_keypair(&kp_b.pubkey());
-        assert!(r.is_err());
-    }
-    */
+    Ok(results)
 }
