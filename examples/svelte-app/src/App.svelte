@@ -1,8 +1,9 @@
 <script lang="ts">
   import {
+    deleteMnemonic,
+    fetchMnemonicMetadatas,
     generateMnemonicPhrase,
     importMnemonic,
-    fetchMnemonicMetadatas,
   } from "tauri-plugin-solana-wallet-api";
 
   let mnemonicMetadatas = [];
@@ -30,14 +31,17 @@
   function _listPubkeys() {
     fetchMnemonicMetadatas()
       .then((res) => {
-        console.log(res);
         mnemonicMetadatas = res;
       })
       .catch(fail);
   }
 
-  function _deleteMnemonic(o) {
-    console.log('delete:', o);
+  function _deleteMnemonic(publicKey) {
+    deleteMnemonic(publicKey)
+      .then(() => {
+        _listPubkeys();
+      })
+      .catch(fail);
   }
 
   _listPubkeys();
@@ -46,10 +50,14 @@
 <div>
   <button on:click={_generateMnemonic}>Generate Mnemonic</button>
 
-  {#each mnemonicMetadatas as mmm}
-    <li>
-      <pre>{mmm.publicKey} | {mmm.languageCode} | {mmm.importedAt}</pre>
-      <button on:click={_deleteMnemonic(mmm)}>Delete Mnemonic</button>
-    </li>
-  {/each}
+  <h1>Mnemonic Public Keys {mnemonicMetadatas.length}</h1>
+  <ol>
+    {#each mnemonicMetadatas as mm}
+      <li>
+        <pre>{mm.publicKey} | {mm.languageCode} | {mm.importedAt}</pre>
+        <button on:click={_deleteMnemonic(mm.publicKey)}>Delete Mnemonic</button
+        >
+      </li>
+    {/each}
+  </ol>
 </div>

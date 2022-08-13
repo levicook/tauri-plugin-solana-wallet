@@ -15,6 +15,10 @@ export async function importMnemonic(args: {
   return invoke('plugin:solana-wallet|import_mnemonic', args)
 }
 
+export async function deleteMnemonic(publicKey: String): Promise<{}> {
+  return invoke('plugin:solana-wallet|delete_mnemonic', { publicKey })
+}
+
 export async function fetchMnemonicMetadatas(): Promise<{
   publicKey: String,
   languageCode: String,

@@ -3,7 +3,7 @@ use std::fs::create_dir_all;
 use bip39::{Language, Mnemonic, MnemonicType, Seed};
 use rusqlite::{params, Connection};
 use serde::{ser::Serializer, Serialize};
-use solana_sdk::{pubkey::Pubkey, signature::keypair_from_seed, signer::Signer};
+use solana_sdk::{signature::keypair_from_seed, signer::Signer};
 use tauri::{
     async_runtime::Mutex,
     plugin::{Builder, TauriPlugin},
@@ -155,21 +155,21 @@ async fn import_mnemonic(
 }
 
 #[tauri::command]
-async fn delete_mnemonic(state: State<'_, Database>, pubkey: Pubkey) -> Result<()> {
-    // TODO validate pubkey is a pubkey?
+async fn delete_mnemonic(state: State<'_, Database>, public_key: String) -> Result<()> {
+    // let public_key: Pubkey = public_key.parse()?; // TODO?
 
-    // delete pubkey and language from sqlite
+    // delete public_key and language from sqlite
     let conn = state.conn.lock().await;
     let mut stmt = conn.prepare_cached(SQL_DELETE_MNEMONIC_METADATA)?;
-    stmt.execute(params![pubkey.to_string()])?;
+    stmt.execute(params![public_key.to_string()])?;
 
     // delete bip39 seed password from keyring
-    let entry = format!("{}-seed", &pubkey);
+    let entry = format!("{}-seed", &public_key);
     let entry = keyring::Entry::new(&PLUGIN_NAME, &entry);
     entry.delete_password()?;
 
     // delete mnemonic from keyring
-    let entry = format!("{}-phrase", &pubkey);
+    let entry = format!("{}-phrase", &public_key);
     let entry = keyring::Entry::new(&PLUGIN_NAME, &entry);
     entry.delete_password()?;
 
@@ -179,8 +179,10 @@ async fn delete_mnemonic(state: State<'_, Database>, pubkey: Pubkey) -> Result<(
 }
 
 #[tauri::command]
-fn export_mnemonic(_state: State<Database>, _pubkey: Pubkey) -> Result<String> {
-    // TODO validate pubkey is a pubkey
+fn export_mnemonic(_state: State<Database>, public_key: String) -> Result<String> {
+    // let public_key: Pubkey = public_key.parse()?; // TODO?
+    let _ = public_key;
+
     Ok("todo".to_string())
 }
 
