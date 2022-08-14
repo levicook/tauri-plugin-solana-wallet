@@ -1,5 +1,12 @@
 import { invoke } from '@tauri-apps/api/tauri'
 
+export enum WalletEvents {
+  MnemonicDeleted = "solana-wallet://mnemonic-deleted",
+  MnemonicImported = "solana-wallet://mnemonic-imported"
+}
+export interface MnemonicDeleted { publicKey: String; }
+export interface MnemonicImported { publicKey: String; }
+
 export async function generateMnemonicPhrase(args: {
   wordCount: number,
   languageCode: String

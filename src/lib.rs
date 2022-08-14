@@ -7,7 +7,7 @@ use solana_sdk::{signature::keypair_from_seed, signer::Signer};
 use tauri::{
     async_runtime::Mutex,
     plugin::{Builder, TauriPlugin},
-    Manager, Runtime, State,
+    Manager, Runtime, State, Window,
 };
 
 #[derive(Debug, thiserror::Error)]
@@ -20,6 +20,9 @@ pub enum Error {
 
     #[error(transparent)]
     Sqlite(#[from] rusqlite::Error),
+
+    #[error(transparent)]
+    Tauri(#[from] tauri::Error),
 }
 
 impl Serialize for Error {
@@ -118,8 +121,20 @@ fn generate_mnemonic_phrase(word_count: usize, language_code: String) -> Result<
     Ok(mnemonic.into_phrase())
 }
 
+#[derive(Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct MnemonicImported {
+    public_key: String,
+}
+#[derive(Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct MnemonicDeleted {
+    public_key: String,
+}
+
 #[tauri::command]
-async fn import_mnemonic(
+async fn import_mnemonic<R: Runtime>(
+    window: Window<R>,
     state: State<'_, Database>,
     phrase: String,
     language_code: String,
@@ -132,30 +147,39 @@ async fn import_mnemonic(
     let password = password.unwrap_or_else(|| String::from(""));
     let seed = Seed::new(&mnemonic, &password);
     let keypair = keypair_from_seed(seed.as_bytes()).unwrap();
-    let pubkey = keypair.pubkey();
+    let public_key = keypair.pubkey();
 
-    // save pubkey and language in sqlite
+    // save public_key and language in sqlite
     let conn = state.conn.lock().await;
     let mut stmt = conn.prepare_cached(SQL_INSERT_MNEMONIC_METADATA)?;
-    stmt.execute(params![pubkey.to_string(), language_code])?;
+    stmt.execute(params![public_key.to_string(), language_code])?;
 
     // save bip39 seed password in keyring
-    let entry = format!("{}-seed", pubkey.to_string());
+    let entry = format!("{}-seed", public_key.to_string());
     let entry = keyring::Entry::new(&PLUGIN_NAME, &entry);
     entry.set_password(&password).unwrap();
 
     // save mnemonic in keyring
-    let entry = format!("{}-phrase", pubkey.to_string());
+    let entry = format!("{}-phrase", public_key.to_string());
     let entry = keyring::Entry::new(&PLUGIN_NAME, &entry);
     entry.set_password(&mnemonic.phrase()).unwrap();
 
-    // TODO emit an event here?
+    window.emit(
+        &format!("{}://mnemonic-imported", PLUGIN_NAME),
+        MnemonicImported {
+            public_key: public_key.to_string(),
+        },
+    )?;
 
-    Ok(pubkey.to_string())
+    Ok(public_key.to_string())
 }
 
 #[tauri::command]
-async fn delete_mnemonic(state: State<'_, Database>, public_key: String) -> Result<()> {
+async fn delete_mnemonic<R: Runtime>(
+    window: Window<R>,
+    state: State<'_, Database>,
+    public_key: String,
+) -> Result<()> {
     // let public_key: Pubkey = public_key.parse()?; // TODO?
 
     // delete public_key and language from sqlite
@@ -173,7 +197,10 @@ async fn delete_mnemonic(state: State<'_, Database>, public_key: String) -> Resu
     let entry = keyring::Entry::new(&PLUGIN_NAME, &entry);
     entry.delete_password()?;
 
-    // TODO emit an event here?
+    window.emit(
+        &format!("{}://mnemonic-deleted", PLUGIN_NAME),
+        MnemonicDeleted { public_key },
+    )?;
 
     Ok(())
 }

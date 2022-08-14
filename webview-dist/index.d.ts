@@ -1,3 +1,13 @@
+export declare enum WalletEvents {
+    MnemonicDeleted = "solana-wallet://mnemonic-deleted",
+    MnemonicImported = "solana-wallet://mnemonic-imported"
+}
+export interface MnemonicDeleted {
+    publicKey: String;
+}
+export interface MnemonicImported {
+    publicKey: String;
+}
 export declare function generateMnemonicPhrase(args: {
     wordCount: number;
     languageCode: String;

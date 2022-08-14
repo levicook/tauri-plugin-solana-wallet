@@ -16,6 +16,7 @@ anyhow = "1.0.34"
 
 keyring = "1.2.0"
 solana-sdk = "1.11.5"
+# solana-client = "1.11.5"
 tiny-bip39 = "0.8.2"
 
 rusqlite = { version = "0.28.0", features = ["bundled"] }
