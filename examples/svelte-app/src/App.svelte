@@ -70,6 +70,7 @@
 
 <div>
   <button on:click={_generateMnemonic}>Generate Mnemonic</button>
+  <button on:click={_generateMnemonic}>Import Mnemonic (TODO)</button>
 
   <h1>Mnemonic Public Keys {mnemonicMetadatas.length}</h1>
   <ol>

@@ -19,9 +19,11 @@ Provide features to support the following workflows:
  - [ ] Grind Vanity Address?
  - [ ] Sign Messages
 
- - [ ] Portfolio Tracking
-   - [ ] List Portfolios
-   - [ ] Discover Portfolios from Mnemonic? (look for balances in derived wallets)
+ - [ ] Network Selection: custom | devnet | testnet | mainnet-beta
+  - [ ] RPC Selection?
+
+ - [ ] Portfolio Management
+   - [ ] Discover Portfolios (ie: look for balances in derived wallets)
    - [ ] Create Portfolio
    - [ ] Delete Portfolio
    - A portfolio is:
@@ -30,15 +32,20 @@ Provide features to support the following workflows:
      - SPL Balances
      - Network selection
      - Monitored / balance changes generate events
+  - Should a portfolio be asset oriented?
+  - Portfolio is a bucket of tokens??
+  - Tokens are discovered by looking for balances
+  - SOL is always listed
+  - ^^ this might beyond the scope of this plugin and encroaching on app level worries.
+    ... will use these ideas to figure out what functionality the app wants the plugin to provide
 
+** Note everywhere I'm saying "wallet", I basically mean "hot wallet"
 
- - [ ] Network Selection: custom | devnet | testnet | mainnet-beta
-  - [ ] RPC Selection?
+** Want to support an "asset first" UX -- ie: show me USDC, then enumerage the wallets / accounts it sits in.
 
+** Rough architectureal thoughts: Monitoring should use pubsub + websocket connections. Keep view state in sqlite. Event processors should update view state (sqlite) then emit window events to let the UI decide what, if anything it should do.
 
- ** Note everywhere I'm saying "wallet", I basically mean "hot wallet"
-
- ** Want to support an "asset first" UX -- ie: show me USDC, then enumerage the wallets / accounts it sits in.
+** TBD: figure out where to source tokens from. Probably Solflare Token List (github solflare-wallet/solflare). Maybe bundle a copy? Then download updates with user permission??
 
 ## Rough notes on managing dependencies:
 
