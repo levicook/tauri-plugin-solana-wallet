@@ -9,30 +9,36 @@ Goal: Simplify building and delivering "tapps" (Tauri Apps)
 ## Rough notes on workflows this plugin should support:
 
 Provide features to support the following workflows:
- * Create Wallet
- * Import Wallet
- * Export Wallet
- * Delete Wallet
- * List Wallets
- * Connect Ledger
- * Connect Keystone
- * Grind Vanity Address?
+ - [x] Create Wallet
+ - [x] Import Wallet
+ - [x] Delete Wallet
+ - [x] List Wallets
+ - [ ] Export Wallet
+ - [ ] Connect Ledger?
+ - [ ] Connect Keystone?
+ - [ ] Grind Vanity Address?
+ - [ ] Sign Messages
 
-Create Wallet
-- store mnemonic, return derivation path & public key
+ - [ ] Portfolio Tracking
+   - [ ] List Portfolios
+   - [ ] Discover Portfolios from Mnemonic? (look for balances in derived wallets)
+   - [ ] Create Portfolio
+   - [ ] Delete Portfolio
+   - A portfolio is:
+     - A pubkey
+     - SOL Balance
+     - SPL Balances
+     - Network selection
+     - Monitored / balance changes generate events
 
-Import Wallet
-- store mnemonic, return derivation path & public key
 
-Export Wallet
-- pass derivation path & public key, return mnemonic
-- pass derivation path & public key, return bytes
+ - [ ] Network Selection: custom | devnet | testnet | mainnet-beta
+  - [ ] RPC Selection?
 
 
-Possible signatures?
-- write_keypair(Keypair) -> (Pubkey, DerivationPath) // format!("%X", keypair.to_bytes());
-- read_keypair(...) -> (Keypair)
-- sign_message + try_sign_message()
+ ** Note everywhere I'm saying "wallet", I basically mean "hot wallet"
+
+ ** Want to support an "asset first" UX -- ie: show me USDC, then enumerage the wallets / accounts it sits in.
 
 ## Rough notes on managing dependencies:
 
